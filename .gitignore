@@ -1,0 +1,11 @@
+CMakeCache.txt
+.vs
+CMakeFiles
+Debug
+*vcxproj*
+*.cmake
+*.opensdf
+*.sdf
+*.swp
+*.sln
+*~

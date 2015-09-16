@@ -1,5 +1,6 @@
 #include "server_http.hpp"
 #include "client_http.hpp"
+#include "include/sqlite/sqlite3.h"
 
 //Added for the json-example
 #define BOOST_SPIRIT_THREADSAFE
@@ -22,6 +23,7 @@ int main() {
     HttpServer server(8080, 4);
     
     //Add resources using path-regex and method-string, and an anonymous function
+	
     //POST-example for the path /string, responds the posted string
     server.resource["^/string$"]["POST"]=[](HttpServer::Response& response, shared_ptr<HttpServer::Request> request) {
         //Retrieve string from istream (request->content)
@@ -76,6 +78,41 @@ int main() {
         string number=request->path_match[1];
         response << "HTTP/1.1 200 OK\r\nContent-Length: " << number.length() << "\r\n\r\n" << number;
     };
+
+	//GET-example for the path /match/[number], responds with the matched string in path (number)
+	//For instance a request GET /match/123 will receive: 123
+	server.resource["^/db/([0-9]+)$"]["GET"] = [](HttpServer::Response& response, shared_ptr<HttpServer::Request> request) {
+		string number = request->path_match[1];
+		sqlite3* dbPtr;
+		sqlite3_open("test.db", &dbPtr);
+		stringstream stream;
+		stream << "CREATE TABLE IF NOT EXISTS names"
+			"  id SMALLINT PRIMARY KEY,"
+			"  name VARCHAR(32);"
+			"SELECT name FROM names"
+			"  where id=" << number;
+		char* errorMsg;
+		sqlite3_exec(
+			dbPtr,
+			stream.str().c_str(), 
+			[](void* context, int numColumns, char** columnValues, char** columnNames)
+			{
+				if (numColumns != 1)
+				{
+					return 1;
+				}
+				string firstColumnValue(columnValues[0]);
+				auto& response = *static_cast<HttpServer::Response*>(context);
+				response << "HTTP/1.1 200 OK\r\nContent-Length: " << firstColumnValue.length() << "\r\n\r\n" << firstColumnValue;
+				return 0;
+			}, 
+			&response, 
+			&errorMsg);
+		if (errorMsg)
+		{
+			response << errorMsg;
+		}
+	};
     
     //Default GET-example. If no other matches, this anonymous function will be called. 
     //Will respond with content in the web/-directory, and its subdirectories.
@@ -107,7 +144,7 @@ int main() {
                             //read and send 128 KB at a time
                             size_t buffer_size=131072;
                             vector<char> buffer;
-                            buffer.reserve(buffer_size);
+                            buffer.resize(buffer_size);
                             size_t read_length;
                             try {
                                 while((read_length=ifs.read(&buffer[0], buffer_size).gcount())>0) {

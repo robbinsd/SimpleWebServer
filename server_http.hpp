@@ -272,8 +272,12 @@ namespace SimpleWeb {
             }
         }
         
+		typedef typename ServerBase<socket_type>::Request RequestType;
+		typedef typename ServerBase<socket_type>::Response ResponseType;
+		// TODO: figure out a way to allow resource_function to be async. Want resource_function to return an Async<Response>. It's probably
+		// easier if Response is not a stream.
         void write_response(std::shared_ptr<socket_type> socket, std::shared_ptr<Request> request, 
-                std::function<void(typename ServerBase<socket_type>::Response&, std::shared_ptr<typename ServerBase<socket_type>::Request>)>& resource_function) {
+                std::function<void(ResponseType&, std::shared_ptr<RequestType>)>& resource_function) {
             //Set timeout on the following boost::asio::async-read or write function
             std::shared_ptr<boost::asio::deadline_timer> timer;
             if(timeout_content>0)
