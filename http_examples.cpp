@@ -3,6 +3,7 @@
 #include "Database.h"
 #include "Choice.h"
 #include "Async.h"
+#include "SharedPtrMonad.h"
 #include "Curry.h"
 //Added for the json-example
 #define BOOST_SPIRIT_THREADSAFE

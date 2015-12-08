@@ -2,10 +2,10 @@ CMakeCache.txt
 .vs
 CMakeFiles
 Debug
-*vcxproj*
+*vcxproj.filters
+*vcxproj.user
 *.cmake
 *.opensdf
 *.sdf
 *.swp
-*.sln
 *~
