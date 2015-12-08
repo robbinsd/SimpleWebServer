@@ -1,6 +1,9 @@
 #include "server_http.hpp"
 #include "client_http.hpp"
 #include "Database.h"
+#include "Choice.h"
+#include "Async.h"
+#include "Curry.h"
 //Added for the json-example
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/ptree.hpp>
@@ -77,72 +80,6 @@ public:
 	}
 };
 
-template <typename R, typename T1, typename T2>
-class SwitchCaseConstVisitor : public boost::static_visitor<R>
-{
-public:
-	typedef std::function<R(const T1&)> Type1Handler;
-	typedef std::function<R(const T2&)> Type2Handler;
-	SwitchCaseConstVisitor(Type1Handler handler1, Type2Handler handler2)
-		: m_handler1(handler1)
-		, m_handler2(handler2)
-	{
-	}
-
-	R operator()(T1 type1Value) const
-	{
-		return m_handler1(type1Value);
-	}
-
-	R operator()(T2 type2Value) const
-	{
-		return m_handler2(type2Value);
-	}
-
-protected:
-	Type1Handler m_handler1;
-	Type2Handler m_handler2;
-};
-
-template <typename R, typename T1, typename T2>
-R SwitchCaseConst(const boost::variant<T1, T2>& choice, std::function<R(const T1&)> handler1, std::function<R(const T2&)> handler2)
-{
-	return choice.apply_visitor(SwitchCaseConstVisitor<R,T1,T2>(handler1, handler2));
-}
-
-template <typename R, typename T1, typename T2>
-class SwitchCaseVisitor : public boost::static_visitor<R>
-{
-public:
-	typedef std::function<R(T1&)> Type1Handler;
-	typedef std::function<R(T2&)> Type2Handler;
-	SwitchCaseVisitor(Type1Handler handler1, Type2Handler handler2)
-		: m_handler1(handler1)
-		, m_handler2(handler2)
-	{
-	}
-
-	R operator()(T1 type1Value) const
-	{
-		return m_handler1(type1Value);
-	}
-
-	R operator()(T2 type2Value) const
-	{
-		return m_handler2(type2Value);
-	}
-
-protected:
-	Type1Handler m_handler1;
-	Type2Handler m_handler2;
-};
-
-template <typename R, typename T1, typename T2>
-R SwitchCase(const boost::variant<T1, T2>& choice, std::function<R(T1&)> handler1, std::function<R(T2&)> handler2)
-{
-	return choice.apply_visitor(SwitchCaseVisitor<R, T1, T2>(handler1, handler2));
-}
-
 //POST-example for the path /string, responds the posted string
 void StringPost(HttpServer::Response& response, shared_ptr<HttpServer::Request> request) {
 	//Retrieve string from istream (request->content)
@@ -200,7 +137,7 @@ void MatchGet(HttpServer::Response& response, shared_ptr<HttpServer::Request> re
 
 void DbGet(HttpServer::Response& response, shared_ptr<HttpServer::Request> request) {
 	string number = request->path_match[1];
-	boost::variant<Database::Error, Database::Name> result = s_db->GetName(number);
+	Failable<Database::Name> result = s_db->GetName(number);
 	/*boost::variant<string, int> result2 = "poop"s;
 	cout << result2 << endl;
 	boost::variant<int, string> result3 = "poop"s;
@@ -234,14 +171,13 @@ void DbGet(HttpServer::Response& response, shared_ptr<HttpServer::Request> reque
 	cout << result5 << endl;
 	r5 = result5.apply_visitor(ToStringVisitor());
 	boost::variant<string, string, string> result4 = "poop"s;*/
-	SwitchCaseConst<void, Database::Error, Database::Name>(
-		result,
-		[&response](const Database::Error& error) {
-		ResponseWithCode(response, HttpCode::BAD_REQUEST, error.m_message);
-	},
+	result.SwitchCase<void>(
+		[&response](const Error& error) {
+			ResponseWithCode(response, HttpCode::BAD_REQUEST, error.m_message);
+		},
 		[&response](const Database::Name& name) {
-		ResponseWithCode(response, HttpCode::OK, name);
-	}
+			ResponseWithCode(response, HttpCode::OK, name);
+		}
 	);
 	/*if (result.which() == 0)
 	{
@@ -324,14 +260,101 @@ void WebGet(HttpServer::Response& response, shared_ptr<HttpServer::Request> requ
 	string content = "Could not open path " + request->path;
 	response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
 }
-
+void DoThing(const string& str)
+{
+	cout << str << endl;
+}
+void DoThingStr(string& str)
+{
+	str = str + " life";
+}
+void DoThingInt(int& i)
+{
+	i++;
+}
+void printThreeStrs(std::string a, std::string b, std::string c)
+{
+	std::cout << a << b << c;
+}
 int main() {
-	// TODO: make better version of variant, which can do unsafe access for more convenient function flow.
-	// or just make wrapper around variant, which defines SwitchCase methods. Basically want to take advantage of argument type deduction.
-	Database::Failable<Database> fDb = Database::Create();
-	int mainRet = SwitchCase<int, Database::Error, Database>(
-		fDb,
-		[](Database::Error& error)
+	auto sharedPoop = std::make_shared<string>("poop");
+	std::shared_ptr<string> sharedEmpty;
+	std::function<size_t(string)> LengthFunc = [](string str) { return str.length(); };
+	std::shared_ptr<size_t> sharedPoopLen = FunctorTransform(LengthFunc, sharedPoop);
+	std::shared_ptr<size_t> sharedEmptyLen = FunctorTransform(LengthFunc, sharedEmpty);
+
+	std::function<int(int,int,int)> add = [](int a, int b, int c) {
+		return a + b + c;
+	};
+	auto curriedAdd = curry(add);
+	cout << curriedAdd(1)(5)(6) << endl;
+	curry(printThreeStrs)("Hello ")("functional ")("world!");
+
+	std::shared_ptr<int> a = std::make_shared<int>(1);
+	std::shared_ptr<int> b = std::make_shared<int>(5);
+	std::shared_ptr<int> c = std::make_shared<int>(6);
+	std::shared_ptr<int> sum = FunctorApply(FunctorApply(FunctorTransform(curriedAdd, a), b), c);
+	std::shared_ptr<int> sum2 = FunctorTransform3(add, a, b, c);
+
+	std::function<std::shared_ptr<int>(int)> squareRoot = [](int x) {
+		if (x >= 0)
+		{
+			return std::make_shared<int>(sqrt(x));
+		}
+		return std::shared_ptr<int>();
+	};
+	std::function<std::shared_ptr<int>(int)> fiveDiv = [](int x) {
+		if (x != 0)
+		{
+			return std::make_shared<int>(-25 / x);
+		}
+		return std::shared_ptr<int>();
+	};
+	std::shared_ptr<int> result = FunctorBind(std::make_shared<int>(25), squareRoot);
+	std::shared_ptr<int> result2 = squareRoot(25);
+	std::shared_ptr<int> result3 = FunctorBind(squareRoot(25), fiveDiv); //-5
+	std::shared_ptr<int> result4 = FunctorBind(squareRoot(-2), fiveDiv); //empty
+	std::shared_ptr<int> result5 = FunctorBind(squareRoot(-10), fiveDiv); //empty
+	std::shared_ptr<int> result6 = FunctorBind(squareRoot(0), fiveDiv); //empty
+	std::shared_ptr<int> result7 = FunctorBind(squareRoot(1), fiveDiv); //-25
+	std::shared_ptr<int> result8 = FunctorBind(fiveDiv(2), squareRoot); //empty
+	std::shared_ptr<int> result9 = FunctorBind(fiveDiv(-2), squareRoot); // 3
+	std::shared_ptr<int> result10 = fiveDiv(-2) >= squareRoot; // 3
+	cout << "done, son." << endl;
+	//std::shared_ptr<int> sum2 = FunctorBind(c, FunctorBind(b, FunctorBind(a, curriedAdd)));
+	/*std::function<void(const string&)> constHandler = DoThing;
+	std::function<void(string&)> handler = DoThing;
+	string str("hi");
+	const string& strCR = str;
+	string& strR = str;
+	constHandler(strCR);
+	constHandler(strR);
+	//handler(strCR);
+	handler(strR);
+
+	Choice<int, string> choice("hello"s);
+	Choice<int, string> choice2(302);
+	int len = choice2.SwitchCaseConst<int>([](const int& i) {
+		return i;
+	}, [](const string& str) {
+		return str.length();
+	});
+
+	choice.SwitchCase<void>(DoThingInt, DoThing);*/
+
+	/*Failable<int> fi(1);
+	fi.SwitchCase<void>([](Error& err)
+	{
+		err.m_code++;
+	},
+		[](int& i)
+	{
+		i--;
+	});
+	cout << fi.GetVariant() << endl;*/
+	Failable<Database> fDb = Database::Create();
+	int mainRet = fDb.SwitchCase<int>(
+		[](Error& error)
 		{
 			cerr << error.m_message << endl;
 			return 1; // returned by main. 1 indicates an error.
@@ -365,6 +388,7 @@ int main() {
 	);
     
 	return mainRet;
+	//return 0;
 }
 
 

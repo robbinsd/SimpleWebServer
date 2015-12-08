@@ -4,6 +4,8 @@
 
 #include <boost/variant.hpp>
 
+#include "Choice.h"
+
 using namespace std;
 
 class sqlite3;
@@ -11,18 +13,11 @@ class sqlite3;
 class Database
 {
 public:
-	struct Error
-	{
-		Error() : m_code(0) { }
-		Error(string message) : m_message(message), m_code(1) { }
-
-		string m_message;
-		int m_code;
-	};
-	typedef string Name;
-	template<typename T> using Failable = boost::variant<Error, T>;
 
 	static Failable<Database> Create();
+
+	typedef string Name;
+	//template <typename T> typedef Failable<T>;
 
 	Failable<Name> GetName(string id); // output: errorMsg
 	Error ReplaceName(string id, Name name); //output: errorMsg

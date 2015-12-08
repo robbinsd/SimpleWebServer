@@ -6,7 +6,9 @@
 
 #include "include/sqlite/sqlite3.h"
 
-Database::Failable<Database> Database::Create()
+#include "Choice.h"
+
+Failable<Database> Database::Create()
 {
 	sqlite3* dbPtr = NULL;
 	sqlite3_open("test.db", &dbPtr);
@@ -34,7 +36,7 @@ Database::Failable<Database> Database::Create()
 	return Database(dbPtr);
 }
 
-Database::Error Database::ReplaceName(string id, Database::Name name)
+Error Database::ReplaceName(string id, Database::Name name)
 {
 	stringstream stream;
 	stream << "INSERT OR REPLACE INTO names (id, name)"
@@ -52,7 +54,7 @@ Database::Error Database::ReplaceName(string id, Database::Name name)
 	return Error(errorMsg);
 }
 
-Database::Failable<Database::Name> Database::GetName(string id)
+Failable<Database::Name> Database::GetName(string id)
 {
 	stringstream stream;
 	stream << "CREATE TABLE IF NOT EXISTS names("
