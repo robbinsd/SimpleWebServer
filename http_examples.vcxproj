@@ -115,7 +115,7 @@
     </Midl>
     <Link>
       <AdditionalOptions> /machine:X86 /debug %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_system-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_date_time-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_regex-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_context-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_coroutine-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_filesystem-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\boost_system-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\boost_thread-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\boost_coroutine-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\boost_context-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\boost_filesystem-vc140-mt-gd-1_59.lib;lib\sqlite3.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_system-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_date_time-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_regex-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_context-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_coroutine-vc140-mt-gd-1_59.lib;C:\local\boost_1_59_0\lib32-msvc-14.0\libboost_filesystem-vc140-mt-gd-1_59.lib;lib\sqlite3.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -124,6 +124,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>

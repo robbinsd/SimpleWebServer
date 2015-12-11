@@ -10,6 +10,17 @@ using Continuation = std::function<void(A)>;
 template <typename A>
 using Async = std::function<void(Continuation<A>)>;
 
+// pure :: a -> f a
+// AKA return
+template <typename A>
+Async<A> MakeAsync(A value)
+{
+	return [=](Continuation<A> cont)
+	{
+		cont(value);
+	};
+}
+
 // fmap :: (a -> b) -> f a -> f b
 // AKA lift
 template <typename A, typename R>
@@ -19,7 +30,7 @@ Async<R> FunctorTransform(std::function<R(A)> func, Async<A> asyncA)
 	{
 		Continuation<A> contA = [=](A a) {
 			contR(func(a));
-		}
+		};
 		asyncA(contA);
 	};
 }
@@ -35,27 +46,19 @@ Async<R> FunctorTransform3(std::function<R(A, B, C)> func, Async<A> aVal, Async<
 }
 
 // apply :: f (a -> b) -> f a -> f b
-/*template <typename A, typename R>
+template <typename A, typename R>
 Async<R> FunctorApply(Async< std::function<R(A)> > asyncFuncAtoR, Async<A> asyncA)
 {
-	Continuation<A> contA = [=](A a) {
-		contR(func(a));
-	}
-	asyncA(contA)
-	asyncFuncAtoB(contAToB)
 	return [=](Continuation<R> contR)
 	{
-		...
-			contB()
+		Continuation<std::function<R(A)>> contFuncAtoR = [=](std::function<R(A)> funcAtoR)
+		{
+			Async<R> asyncR = FunctorTransform(funcAtoR, asyncA);
+			asyncR(contR);
+		};
+		asyncFuncAtoR(contFuncAtoR);
 	};
-
-	if (func)
-	{
-		return FunctorTransform(*func, value);
-	}
-
-	return Async<B>();
-}*/
+}
 
 // bind :: m a -> (a -> m b) -> m b
 template <typename A, typename B>
@@ -75,24 +78,3 @@ Async<B> operator>=(Async<A> value, std::function<Async<B>(A)> func)
 {
 	return FunctorBind(value, func);
 }
-
-// TODO: experiment with using CurriedFunc everywhere. Look up if it's already part of language.
-/*template <typename R, typename A, typename B>
-class CurriedFunc
-{
-public:
-	CurriedFunc(std::function<R(A,B)> func) : m_func(func) {}
-
-	std::function<R(B)> operator() (A a)
-	{
-		return std::bind(m_func, a);
-	}
-
-	R operator() (A a, B b)
-	{
-		return m_func(a, b);
-	}
-
-protected:
-	std::function<R(A,B)> m_func;
-};*/

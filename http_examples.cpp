@@ -275,7 +275,7 @@ void DoThingInt(int& i)
 }
 void printThreeStrs(std::string a, std::string b, std::string c)
 {
-	std::cout << a << b << c;
+	std::cout << a << b << c << endl;
 }
 int main() {
 	auto sharedPoop = std::make_shared<string>("poop");
@@ -290,6 +290,15 @@ int main() {
 	auto curriedAdd = curry(add);
 	cout << curriedAdd(1)(5)(6) << endl;
 	curry(printThreeStrs)("Hello ")("functional ")("world!");
+
+	auto aa = MakeAsync<int>(5);
+	auto ab = MakeAsync<int>(29);
+	auto ac = MakeAsync<int>(73);
+	Async<int> aSum = FunctorTransform3(add, aa, ab, ac);
+	aSum([](int aSum)
+	{
+		cout << "Sum is: " << aSum << endl;
+	});
 
 	std::shared_ptr<int> a = std::make_shared<int>(1);
 	std::shared_ptr<int> b = std::make_shared<int>(5);
