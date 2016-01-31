@@ -1,5 +1,5 @@
 #ifndef SERVER_HTTP_HPP
-#define	SERVER_HTTP_HPP
+#define SERVER_HTTP_HPP
 
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
@@ -9,6 +9,8 @@
 #include <thread>
 #include <functional>
 #include <iostream>
+
+#include "Async.h"
 
 namespace SimpleWeb {
     template <class socket_type>
@@ -73,16 +75,21 @@ namespace SimpleWeb {
                 catch(const std::exception& e) {}
             }
         };
+
+        typedef std::function<Async<std::string>(std::shared_ptr<typename ServerBase<socket_type>::Request>)> ResourceFunc;
+
+        std::unordered_map<std::string, std::unordered_map<std::string, ResourceFunc> >  resource;
         
-        std::unordered_map<std::string, std::unordered_map<std::string, 
-            std::function<void(typename ServerBase<socket_type>::Response&, std::shared_ptr<typename ServerBase<socket_type>::Request>)> > >  resource;
-        
-        std::unordered_map<std::string, 
-            std::function<void(typename ServerBase<socket_type>::Response&, std::shared_ptr<typename ServerBase<socket_type>::Request>)> > default_resource;
+        std::unordered_map<std::string, ResourceFunc> default_resource;
 
     private:
-        std::vector<std::pair<std::string, std::vector<std::pair<std::regex, 
-            std::function<void(typename ServerBase<socket_type>::Response&, std::shared_ptr<typename ServerBase<socket_type>::Request>)> > > > > opt_resource;
+        std::vector<
+            std::pair<
+                std::string, 
+                std::vector<
+                    std::pair<
+                        std::regex, 
+                        ResourceFunc> > > > opt_resource;
         
     public:
         void start() {
@@ -272,39 +279,37 @@ namespace SimpleWeb {
             }
         }
         
-		typedef typename ServerBase<socket_type>::Request RequestType;
-		typedef typename ServerBase<socket_type>::Response ResponseType;
-		// TODO: figure out a way to allow resource_function to be async. Want resource_function to return an Async<Response>. It's probably
-		// easier if Response is not a stream.
-        void write_response(std::shared_ptr<socket_type> socket, std::shared_ptr<Request> request, 
-                std::function<void(ResponseType&, std::shared_ptr<RequestType>)>& resource_function) {
+        typedef typename ServerBase<socket_type>::Request RequestType;
+        typedef typename ServerBase<socket_type>::Response ResponseType;
+        // TODO: figure out a way to allow resource_function to be async. Want resource_function to return an Async<Response>. It's probably
+        // easier if Response is not a stream.
+        void write_response(std::shared_ptr<socket_type> socket, std::shared_ptr<Request> request, ResourceFunc& resource_function) {
             //Set timeout on the following boost::asio::async-read or write function
             std::shared_ptr<boost::asio::deadline_timer> timer;
             if(timeout_content>0)
                 timer=set_timeout_on_socket(socket, request, timeout_content);
 
-            boost::asio::spawn(request->strand, [this, &resource_function, socket, request, timer](boost::asio::yield_context yield) {
-                Response response(io_service, *socket, yield);
+            Async<std::string> asyncResponseStr = resource_function(request);
+            asyncResponseStr([this, socket, request, timer](std::string responseStr)
+            {
+                boost::asio::spawn(request->strand, [this, socket, request, timer, responseStr](boost::asio::yield_context yield) {
+                    Response response(io_service, *socket, yield);
 
-                try {
-                    resource_function(response, request);
-                }
-                catch(const std::exception& e) {
-                    return;
-                }
-                
-                if(response.size()>0) {
-                    try {
-                        response.flush();
+                    response << responseStr;
+
+                    if (response.size()>0) {
+                        try {
+                            response.flush();
+                        }
+                        catch (const std::exception &e) {
+                            return;
+                        }
                     }
-                    catch(const std::exception &e) {
-                        return;
-                    }
-                }
-                if(timeout_content>0)
-                    timer->cancel();
-                if(stof(request->http_version)>1.05)
-                    read_request_and_content(socket);
+                    if (timeout_content>0)
+                        timer->cancel();
+                    if (stof(request->http_version)>1.05)
+                        read_request_and_content(socket);
+                });
             });
         }
     };
@@ -340,4 +345,4 @@ namespace SimpleWeb {
         }
     };
 }
-#endif	/* SERVER_HTTP_HPP */
+#endif /* SERVER_HTTP_HPP */
