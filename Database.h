@@ -21,7 +21,7 @@ public:
     //template <typename T> typedef Failable<T>;
 
     Async<Failable<Name>> GetName(string id); // output: errorMsg
-    Error ReplaceName(string id, Name name); //output: errorMsg
+    Async<Error> ReplaceName(string id, Name name); //output: errorMsg
 
     /* TODO: experiment with boost::variant.
      apply_visitor is like "lift" (or fmap). It lifts an operation into the variant monad.

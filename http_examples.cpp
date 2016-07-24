@@ -147,41 +147,37 @@ void MatchGet(HttpServer::Response& response, shared_ptr<HttpServer::Request> re
     response << "HTTP/1.1 200 OK\r\nContent-Length: " << number.length() << "\r\n\r\n" << number;
 }
 
-// TODO: make this function not so ugly. Why do we need this many nested lambdas??
-Async<std::string> DbGet(shared_ptr<HttpServer::Request> request) {
-    return [request](Continuation<std::string> callback)
-    {
-        string number = request->path_match[1];
-        Async<Failable<Database::Name>> asyncResult = s_db->GetName(number);
-        asyncResult([callback](const Failable<Database::Name>& result) mutable
+typedef std::string Response;
+Async<Response> DbGet(shared_ptr<HttpServer::Request> request) {
+    string number = request->path_match[1];
+    return FunctorTransformm<Failable<Database::Name>, Response>(
+        s_db->GetName(number), 
+        [](Failable<Database::Name> result)
         {
-            result.SwitchCaseConst<void>(
-                [callback](const Error& error) mutable
+            if (result.IsFailure())
             {
-                callback(FormatResponseWithCode(HttpCode::BAD_REQUEST, error.m_message));
-            },
-                [callback](const Database::Name& name) mutable
-            {
-                callback(FormatResponseWithCode(HttpCode::OK, name));
+                return FormatResponseWithCode(HttpCode::BAD_REQUEST, result.GetFailure().m_message);
             }
-            );
-        });
-    };
+            return FormatResponseWithCode(HttpCode::OK, result.GetSuccess());
+        }
+    );
 }
 
-void DbPut(HttpServer::Response& response, shared_ptr<HttpServer::Request> request) {
+Async<Response> DbPut(shared_ptr<HttpServer::Request> request) {
     string id = request->path_match[1];
     stringstream nameStream;
     nameStream << request->content.rdbuf();
-    string errorMsg = s_db->ReplaceName(id, nameStream.str()).m_message;
-    if (errorMsg.empty())
-    {
-        ResponseWithCode(response, HttpCode::OK, "Success");
-    }
-    else
-    {
-        ResponseWithCode(response, HttpCode::BAD_REQUEST, errorMsg);
-    }
+    return FunctorTransformm<Error, Response>(
+        s_db->ReplaceName(id, nameStream.str()), 
+        [](Error error)
+        {
+            if (error.m_message.empty())
+            {
+                return FormatResponseWithCode(HttpCode::OK, "Success");
+            }
+            return FormatResponseWithCode(HttpCode::BAD_REQUEST, error.m_message);
+        }
+    );    
 }
 
 //Default GET-example. If no other matches, this anonymous function will be called. 
@@ -356,7 +352,7 @@ int main() {
             //server.resource["^/info$"]["GET"] = InfoGet;
             //server.resource["^/match/([0-9]+)$"]["GET"] = MatchGet;
             server.resource["^/db/([0-9]+)$"]["GET"] = DbGet;
-            //server.resource["^/db/([0-9]+)$"]["PUT"] = DbPut;
+            server.resource["^/db/([0-9]+)$"]["PUT"] = DbPut;
             //server.default_resource["GET"] = WebGet;
 
             thread server_thread([&server]() {

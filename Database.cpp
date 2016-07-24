@@ -37,22 +37,30 @@ Failable<Database> Database::Create()
     return Database(dbPtr);
 }
 
-Error Database::ReplaceName(string id, Database::Name name)
+Async<Error> Database::ReplaceName(string id, Database::Name name)
 {
-    stringstream stream;
-    stream << "INSERT OR REPLACE INTO names (id, name)"
+    return [=](Continuation<Error> callback)
+    {
+        std::thread t([=]()
+        {
+            stringstream stream;
+            stream << "INSERT OR REPLACE INTO names (id, name)"
                 "  VALUES (" << id << ", \"" << name << "\");";
-    string query = stream.str();
+            string query = stream.str();
 
-    char* errorMsg = NULL;
-    sqlite3_exec(
-        m_dbPtr,
-        query.c_str(),
-        NULL,
-        NULL,
-        &errorMsg);
-        
-    return Error(errorMsg);
+            char* errorMsg = NULL;
+            sqlite3_exec(
+                m_dbPtr,
+                query.c_str(),
+                NULL,
+                NULL,
+                &errorMsg);
+
+            callback(Error(errorMsg));
+        });
+        // TODO: isn't detach unsafe? should use join here instead?
+        t.detach();
+    };
 }
 
 Async<Failable<Database::Name>> Database::GetName(string id)

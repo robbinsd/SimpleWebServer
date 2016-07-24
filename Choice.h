@@ -136,7 +136,18 @@ struct Error
 };
 std::ostream& operator<< (std::ostream& out, const Error& err);
 
-template <typename T> using Failable = Choice<Error, T>;
+template <typename T>
+class Failable : public Choice<Error, T>
+{
+public:
+    using Choice<Error, T>::Choice;
+
+    bool IsFailure() const { return m_variant.which() == 0; }
+    bool IsSuccess() const { return m_variant.which() == 1; }
+
+    Error   GetFailure() const { return boost::get<Error>(m_variant);   }
+    T       GetSuccess() const { return boost::get<T>(m_variant);       }
+};
 
 
 template <typename A, typename B, typename C>

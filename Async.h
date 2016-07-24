@@ -34,6 +34,17 @@ Async<R> FunctorTransform(std::function<R(A)> func, Async<A> asyncA)
         asyncA(contA);
     };
 }
+template <typename A, typename R>
+Async<R> FunctorTransformm(Async<A> asyncA, std::function<R(A)> func)
+{
+    return [=](Continuation<R> contR)
+    {
+        Continuation<A> contA = [=](A a) {
+            contR(func(a));
+        };
+        asyncA(contA);
+    };
+}
 template <typename A, typename B, typename R>
 Async<R> FunctorTransform2(std::function<R(A, B)> func, Async<A> aVal, Async<B> bVal)
 {
