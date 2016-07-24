@@ -56,7 +56,13 @@ Async<Error> Database::ReplaceName(string id, Database::Name name)
                 NULL,
                 &errorMsg);
 
-            callback(Error(errorMsg));
+            Error error;
+            if (errorMsg)
+            {
+                error = Error(errorMsg);
+                sqlite3_free(errorMsg);
+            }
+            callback(error);
         });
         // TODO: isn't detach unsafe? should use join here instead?
         t.detach();

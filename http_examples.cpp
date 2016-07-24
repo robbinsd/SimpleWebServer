@@ -150,6 +150,7 @@ void MatchGet(HttpServer::Response& response, shared_ptr<HttpServer::Request> re
 typedef std::string Response;
 Async<Response> DbGet(shared_ptr<HttpServer::Request> request) {
     string number = request->path_match[1];
+    // TODO: figure out how to get template type deduction working here.
     return FunctorTransformm<Failable<Database::Name>, Response>(
         s_db->GetName(number), 
         [](Failable<Database::Name> result)
