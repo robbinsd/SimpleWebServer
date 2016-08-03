@@ -43,7 +43,7 @@ std::shared_ptr<R> FunctorApply(std::shared_ptr< std::function<R(A)> > func, std
 
 // bind :: m a -> (a -> m b) -> m b
 template <typename A, typename B>
-std::shared_ptr<B> FunctorBind(std::shared_ptr<A> value, std::function<std::shared_ptr<B>(A)> func)
+std::shared_ptr<B> MonadBind(std::shared_ptr<A> value, std::function<std::shared_ptr<B>(A)> func)
 {
     if (value)
     {
@@ -55,7 +55,7 @@ std::shared_ptr<B> FunctorBind(std::shared_ptr<A> value, std::function<std::shar
 template <typename A, typename B>
 std::shared_ptr<B> operator>=(std::shared_ptr<A> value, std::function<std::shared_ptr<B>(A)> func)
 {
-    return FunctorBind(value, func);
+    return MonadBind(value, func);
 }
 
 // TODO: experiment with using CurriedFunc everywhere. Look up if it's already part of language.

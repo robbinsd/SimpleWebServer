@@ -116,7 +116,7 @@ Async<Failable<Database::Name>> Database::GetName(string id)
     Async<Failable<vector<string>>> asyncResult = SelectFirstCol(query);
     return FunctorTransformm(asyncResult, make_function([](Failable<vector<string>> failableNames)
     {
-        return FunctorBind(failableNames, make_function([](vector<string> names) -> Failable<Name>
+        return MonadBind(failableNames, make_function([](vector<string> names) -> Failable<Name>
         {
             if (names.empty())
             {

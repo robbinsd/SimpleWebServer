@@ -85,7 +85,7 @@ Async<R> FunctorApply(Async< std::function<R(A)> > asyncFuncAtoR, Async<A> async
 
 // bind :: m a -> (a -> m b) -> m b
 template <typename A, typename B>
-Async<B> FunctorBind(Async<A> value, std::function<Async<B>(A)> func)
+Async<B> MonadBind(Async<A> value, std::function<Async<B>(A)> func)
 {
     return [=](Continuation<B> contB)
     {
@@ -99,5 +99,5 @@ Async<B> FunctorBind(Async<A> value, std::function<Async<B>(A)> func)
 template <typename A, typename B>
 Async<B> operator>=(Async<A> value, std::function<Async<B>(A)> func)
 {
-    return FunctorBind(value, func);
+    return MonadBind(value, func);
 }

@@ -163,7 +163,7 @@ Failable<R> FunctorTransformm(Failable<A> failableA, std::function<R(A)> func)
 }
 // bind :: m a -> (a -> m b) -> m b
 template <typename A, typename B>
-Failable<B> FunctorBind(Failable<A> failableA, std::function<Failable<B>(A)> func)
+Failable<B> MonadBind(Failable<A> failableA, std::function<Failable<B>(A)> func)
 {
     if (failableA.IsFailure())
     {
@@ -174,7 +174,7 @@ Failable<B> FunctorBind(Failable<A> failableA, std::function<Failable<B>(A)> fun
 template <typename A, typename B>
 Failable<B> operator>=(Failable<A> failableA, std::function<Failable<B>(A)> func)
 {
-    return FunctorBind(failableA, func);
+    return MonadBind(failableA, func);
 }
 
 template <typename A, typename B, typename C>

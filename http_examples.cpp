@@ -292,18 +292,18 @@ int main() {
         }
         return std::shared_ptr<int>();
     };
-    std::shared_ptr<int> result = FunctorBind(std::make_shared<int>(25), squareRoot);
+    std::shared_ptr<int> result = MonadBind(std::make_shared<int>(25), squareRoot);
     std::shared_ptr<int> result2 = squareRoot(25);
-    std::shared_ptr<int> result3 = FunctorBind(squareRoot(25), fiveDiv); //-5
-    std::shared_ptr<int> result4 = FunctorBind(squareRoot(-2), fiveDiv); //empty
-    std::shared_ptr<int> result5 = FunctorBind(squareRoot(-10), fiveDiv); //empty
-    std::shared_ptr<int> result6 = FunctorBind(squareRoot(0), fiveDiv); //empty
-    std::shared_ptr<int> result7 = FunctorBind(squareRoot(1), fiveDiv); //-25
-    std::shared_ptr<int> result8 = FunctorBind(fiveDiv(2), squareRoot); //empty
-    std::shared_ptr<int> result9 = FunctorBind(fiveDiv(-2), squareRoot); // 3
+    std::shared_ptr<int> result3 = MonadBind(squareRoot(25), fiveDiv); //-5
+    std::shared_ptr<int> result4 = MonadBind(squareRoot(-2), fiveDiv); //empty
+    std::shared_ptr<int> result5 = MonadBind(squareRoot(-10), fiveDiv); //empty
+    std::shared_ptr<int> result6 = MonadBind(squareRoot(0), fiveDiv); //empty
+    std::shared_ptr<int> result7 = MonadBind(squareRoot(1), fiveDiv); //-25
+    std::shared_ptr<int> result8 = MonadBind(fiveDiv(2), squareRoot); //empty
+    std::shared_ptr<int> result9 = MonadBind(fiveDiv(-2), squareRoot); // 3
     std::shared_ptr<int> result10 = fiveDiv(-2) >= squareRoot; // 3
     cout << "done, son." << endl;*/
-    //std::shared_ptr<int> sum2 = FunctorBind(c, FunctorBind(b, FunctorBind(a, curriedAdd)));
+    //std::shared_ptr<int> sum2 = MonadBind(c, MonadBind(b, MonadBind(a, curriedAdd)));
     /*std::function<void(const string&)> constHandler = DoThing;
     std::function<void(string&)> handler = DoThing;
     string str("hi");
