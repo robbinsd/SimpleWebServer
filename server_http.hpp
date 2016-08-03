@@ -290,7 +290,7 @@ namespace SimpleWeb {
                 timer=set_timeout_on_socket(socket, request, timeout_content);
 
             Async<std::string> asyncResponseStr = resource_function(request);
-            asyncResponseStr([this, socket, request, timer](std::string responseStr)
+            asyncResponseStr.BeginExecution([this, socket, request, timer](std::string responseStr)
             {
                 boost::asio::spawn(request->strand, [this, socket, request, timer, responseStr](boost::asio::yield_context yield) {
                     Response response(io_service, *socket, yield);

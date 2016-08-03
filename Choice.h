@@ -150,6 +150,18 @@ public:
 
     Error   GetFailure() const { return boost::get<Error>(m_variant);   }
     T       GetSuccess() const { return boost::get<T>(m_variant);       }
+
+    template <typename T2>
+    Failable<T2> Transform(std::function<T2(T)> func)
+    {
+        return FunctorTransformm(*this, func);
+    }
+
+    template <typename T2>
+    Failable<T2> Transform(std::function<Failable<T2>(T)> func)
+    {
+        return MonadBind(*this, func);
+    }
 };
 template <typename A, typename R>
 Failable<R> FunctorTransformm(Failable<A> failableA, std::function<R(A)> func)

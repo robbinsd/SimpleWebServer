@@ -40,7 +40,7 @@ Failable<Database> Database::Create()
 
 Async<Error> Database::ReplaceName(string id, Database::Name name)
 {
-    return [=](Continuation<Error> callback)
+    return [=](Callback<Error> callback)
     {
         std::thread t([=]()
         {
@@ -113,10 +113,10 @@ Async<Failable<Database::Name>> Database::GetName(string id)
         "SELECT name FROM names"
         "  where id=" << id << ";";
     string query = stream.str();
-    Async<Failable<vector<string>>> asyncResult = SelectFirstCol(query);
-    return FunctorTransformm(asyncResult, make_function([](Failable<vector<string>> failableNames)
+
+    auto TryGetFirstName = make_function([](Failable<vector<string>> failableNames) -> Failable<Name>
     {
-        return MonadBind(failableNames, make_function([](vector<string> names) -> Failable<Name>
+        return failableNames.Transform(make_function([](vector<string> names) -> Failable<Name>
         {
             if (names.empty())
             {
@@ -130,5 +130,7 @@ Async<Failable<Database::Name>> Database::GetName(string id)
 
             return names.front();
         }));
-    }));
+    });
+
+    return SelectFirstCol(query).Then(TryGetFirstName);
 }

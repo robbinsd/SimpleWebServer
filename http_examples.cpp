@@ -5,6 +5,7 @@
 #include "Async.h"
 #include "SharedPtrMonad.h"
 #include "Curry.h"
+#include "MakeFunction.h"
 //Added for the json-example
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/ptree.hpp>
@@ -151,8 +152,7 @@ typedef std::string Response;
 Async<Response> DbGet(shared_ptr<HttpServer::Request> request) {
     string number = request->path_match[1];
     // TODO: figure out how to get template type deduction working here.
-    return FunctorTransformm<Failable<Database::Name>, Response>(
-        s_db->GetName(number), 
+    return s_db->GetName(number).Then(make_function(
         [](Failable<Database::Name> result)
         {
             if (result.IsFailure())
@@ -161,15 +161,14 @@ Async<Response> DbGet(shared_ptr<HttpServer::Request> request) {
             }
             return FormatResponseWithCode(HttpCode::OK, result.GetSuccess());
         }
-    );
+    ));
 }
 
 Async<Response> DbPut(shared_ptr<HttpServer::Request> request) {
     string id = request->path_match[1];
     stringstream nameStream;
     nameStream << request->content.rdbuf();
-    return FunctorTransformm<Error, Response>(
-        s_db->ReplaceName(id, nameStream.str()), 
+    return s_db->ReplaceName(id, nameStream.str()).Then(make_function( 
         [](Error error)
         {
             if (error.m_message.empty())
@@ -178,7 +177,7 @@ Async<Response> DbPut(shared_ptr<HttpServer::Request> request) {
             }
             return FormatResponseWithCode(HttpCode::BAD_REQUEST, error.m_message);
         }
-    );    
+    ));    
 }
 
 //Default GET-example. If no other matches, this anonymous function will be called. 

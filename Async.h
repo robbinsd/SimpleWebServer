@@ -5,17 +5,43 @@
 #include "Curry.h"
 
 template <typename A> 
-using Continuation = std::function<void(A)>;
+using Callback = std::function<void(A)>;
 
 template <typename A>
-using Async = std::function<void(Continuation<A>)>;
+class Async
+{
+public:
+    typedef std::function<void(Callback<A>)> FuncType;
+
+    Async(FuncType func) : m_func(func) { }
+
+    template <typename B>
+    Async<B> Then(std::function<B(A)> func) const
+    {
+        return FunctorTransform(func, *this);
+    }
+
+    template <typename B>
+    Async<B> Then(std::function<Async<B>(A)> func) const
+    {
+        return MonadBind(*this, func);
+    }
+
+    void BeginExecution(Callback<A> continuation) const
+    {
+        m_func(continuation);
+    }
+
+private:
+    const FuncType m_func;
+};
 
 // pure :: a -> f a
 // AKA return
 template <typename A>
 Async<A> MakeAsync(A value)
 {
-    return [=](Continuation<A> cont)
+    return [=](Callback<A> cont)
     {
         cont(value);
     };
@@ -24,7 +50,7 @@ Async<A> MakeAsync(A value)
 template <typename A>
 Async<A> MakeFuncAsync(std::function<A()> func)
 {
-    return [=](Continuation<A> cont)
+    return [=](Callback<A> cont)
     {
         cont(func());
     };
@@ -38,23 +64,23 @@ using Lazy = std::function<T()>;
 template <typename A, typename R>
 Async<R> FunctorTransform(std::function<R(A)> func, Async<A> asyncA)
 {
-    return [=](Continuation<R> contR)
+    return [=](Callback<R> contR)
     {
-        Continuation<A> contA = [=](A a) {
+        Callback<A> contA = [=](A a) {
             contR(func(a));
         };
-        asyncA(contA);
+        asyncA.BeginExecution(contA);
     };
 }
 template <typename A, typename R>
 Async<R> FunctorTransformm(Async<A> asyncA, std::function<R(A)> func)
 {
-    return [=](Continuation<R> contR)
+    return [=](Callback<R> contR)
     {
-        Continuation<A> contA = [=](A a) {
+        Callback<A> contA = [=](A a) {
             contR(func(a));
         };
-        asyncA(contA);
+        asyncA.BeginExecution(contA);
     };
 }
 template <typename A, typename B, typename R>
@@ -72,9 +98,9 @@ Async<R> FunctorTransform3(std::function<R(A, B, C)> func, Async<A> aVal, Async<
 template <typename A, typename R>
 Async<R> FunctorApply(Async< std::function<R(A)> > asyncFuncAtoR, Async<A> asyncA)
 {
-    return [=](Continuation<R> contR)
+    return [=](Callback<R> contR)
     {
-        Continuation<std::function<R(A)>> contFuncAtoR = [=](std::function<R(A)> funcAtoR)
+        Callback<std::function<R(A)>> contFuncAtoR = [=](std::function<R(A)> funcAtoR)
         {
             Async<R> asyncR = FunctorTransform(funcAtoR, asyncA);
             asyncR(contR);
@@ -87,9 +113,9 @@ Async<R> FunctorApply(Async< std::function<R(A)> > asyncFuncAtoR, Async<A> async
 template <typename A, typename B>
 Async<B> MonadBind(Async<A> value, std::function<Async<B>(A)> func)
 {
-    return [=](Continuation<B> contB)
+    return [=](Callback<B> contB)
     {
-        Continuation<A> contA = [=](A a) {
+        Callback<A> contA = [=](A a) {
             Async<B> proxyAsyncB = func(a);
             proxyAsyncB(contB);
         };
