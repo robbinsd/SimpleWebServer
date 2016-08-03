@@ -20,6 +20,18 @@ Async<A> MakeAsync(A value)
         cont(value);
     };
 }
+// (() -> a) -> f a
+template <typename A>
+Async<A> MakeFuncAsync(std::function<A()> func)
+{
+    return [=](Continuation<A> cont)
+    {
+        cont(func());
+    };
+}
+
+template <typename T>
+using Lazy = std::function<T()>;
 
 // fmap :: (a -> b) -> f a -> f b
 // AKA lift

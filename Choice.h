@@ -142,13 +142,40 @@ class Failable : public Choice<Error, T>
 public:
     using Choice<Error, T>::Choice;
 
+    static Failable<T> Success(const T& value) { return Failable(value); }
+    static Failable<T> Failure(const Error& error) { return Failable(error); }
+
     bool IsFailure() const { return m_variant.which() == 0; }
     bool IsSuccess() const { return m_variant.which() == 1; }
 
     Error   GetFailure() const { return boost::get<Error>(m_variant);   }
     T       GetSuccess() const { return boost::get<T>(m_variant);       }
 };
+template <typename A, typename R>
+Failable<R> FunctorTransformm(Failable<A> failableA, std::function<R(A)> func)
+{
+    if (failableA.IsFailure())
+    {
+        return failableA.GetFailure();
+    }
 
+    return func(failableA.GetSuccess()); //implicitly construct success
+}
+// bind :: m a -> (a -> m b) -> m b
+template <typename A, typename B>
+Failable<B> FunctorBind(Failable<A> failableA, std::function<Failable<B>(A)> func)
+{
+    if (failableA.IsFailure())
+    {
+        return failableA.GetFailure();
+    }
+    return func(failableA.GetSuccess());
+}
+template <typename A, typename B>
+Failable<B> operator>=(Failable<A> failableA, std::function<Failable<B>(A)> func)
+{
+    return FunctorBind(failableA, func);
+}
 
 template <typename A, typename B, typename C>
 class Choice

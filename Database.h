@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include <boost/variant.hpp>
 
@@ -28,6 +29,9 @@ public:
      variant is C++ equivalent of haskell Either. Research how Either behaves.
     */
 protected:
+
+    Async<Failable<vector<string>>> SelectFirstCol(string query);
+
     Database(sqlite3* dbPtr) : m_dbPtr(dbPtr) { }
     sqlite3* m_dbPtr;
 };

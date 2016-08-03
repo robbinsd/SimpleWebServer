@@ -8,6 +8,7 @@
 #include "include/sqlite/sqlite3.h"
 
 #include "Choice.h"
+#include "MakeFunction.h"
 
 Failable<Database> Database::Create()
 {
@@ -64,67 +65,70 @@ Async<Error> Database::ReplaceName(string id, Database::Name name)
             }
             callback(error);
         });
-        // TODO: isn't detach unsafe? should use join here instead?
         t.detach();
     };
 }
 
+Async<Failable<vector<string>>> Database::SelectFirstCol(string query)
+{
+    return MakeFuncAsync(make_function([this, query]() -> Failable<vector<string>>
+    {
+        char* errorMsg = NULL;
+        vector<string> firstColumnValues;
+        auto ProcessColumns = [](void* context, int numColumns, char** columnValues, char** columnNames)
+        {
+            if (numColumns != 1)
+            {
+                return 1;
+            }
+            string firstColumnValue(columnValues[0]);
+            auto& firstColumnValues = *static_cast<vector<string>*>(context);
+            firstColumnValues.push_back(firstColumnValue);
+            return 0;
+        };
+        sqlite3_exec(
+            m_dbPtr,
+            query.c_str(),
+            ProcessColumns,
+            &firstColumnValues,
+            &errorMsg
+        );
+        if (errorMsg)
+        {
+            string errorStr(errorMsg);
+            sqlite3_free(errorMsg);
+            return Error(errorStr);
+        }
+        return firstColumnValues;
+    }));
+}
+
 Async<Failable<Database::Name>> Database::GetName(string id)
 {
-    // TODO: make Async2 class, where lambda returns whatever value we want to callback with.
-    // This would make it super easy to turn a synchronous function into an asynchronous one.
-    return [=](Continuation<Failable<Database::Name>> callback)
+    stringstream stream;
+    stream << "CREATE TABLE IF NOT EXISTS names("
+        "  id SMALLINT PRIMARY KEY,"
+        "  name VARCHAR(32)"
+        ");"
+        "SELECT name FROM names"
+        "  where id=" << id << ";";
+    string query = stream.str();
+    Async<Failable<vector<string>>> asyncResult = SelectFirstCol(query);
+    return FunctorTransformm(asyncResult, make_function([](Failable<vector<string>> failableNames)
     {
-        std::thread t([=]()
+        return FunctorBind(failableNames, make_function([](vector<string> names) -> Failable<Name>
         {
-            stringstream stream;
-            stream << "CREATE TABLE IF NOT EXISTS names("
-                "  id SMALLINT PRIMARY KEY,"
-                "  name VARCHAR(32)"
-                ");"
-                "SELECT name FROM names"
-                "  where id=" << id << ";";
-            string query = stream.str();
-            char* errorMsg = NULL;
-            vector<Name> sqlNames;
-            sqlite3_exec(
-                m_dbPtr,
-                query.c_str(),
-                [](void* context, int numColumns, char** columnValues, char** columnNames)
-                {
-                    if (numColumns != 1)
-                    {
-                        return 1;
-                    }
-                    string firstColumnValue(columnValues[0]);
-                    auto& responseRows = *static_cast<vector<string>*>(context);
-                    responseRows.push_back(firstColumnValue);
-                    return 0;
-                },
-                &sqlNames,
-                &errorMsg);
-
-            if (errorMsg)
+            if (names.empty())
             {
-                callback(Error(errorMsg));
-                return;
+                return Error("No name found for that id.");
             }
 
-            if (sqlNames.empty())
+            if (names.size() > 1)
             {
-                callback(Error("No name found for that id."));
-                return;
+               return Error("More than one name found for that id. How is that possible!?");
             }
 
-            if (sqlNames.size() > 1)
-            {
-                callback(Error("More than one name found for that id. How is that possible!?"));
-                return;
-            }
-
-            callback(Name(sqlNames.front()));
-        });
-        // TODO: isn't detach unsafe? should use join here instead?
-        t.detach();
-    };
+            return names.front();
+        }));
+    }));
 }

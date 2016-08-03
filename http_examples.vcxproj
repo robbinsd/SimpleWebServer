@@ -338,6 +338,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="Choice.h" />
     <ClInclude Include="Curry.h" />
     <ClInclude Include="Database.h" />
+    <ClInclude Include="MakeFunction.h" />
     <ClInclude Include="SharedPtrMonad.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
